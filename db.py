@@ -26,11 +26,7 @@ _engine = create_engine(
     connect_args={"check_same_thread": False} if _DB_URL.startswith("sqlite") else {},
 )
 
-SessionLocal = sessionmaker(
-    bind=_engine,
-    autoflush=False,
-    autocommit=False,
-)
+SessionLocal = sessionmaker(bind=_engine, autoflush=False, autocommit=False)
 
 
 def get_engine():
@@ -54,4 +50,3 @@ def session_scope():
         raise
     finally:
         session.close()
-        
