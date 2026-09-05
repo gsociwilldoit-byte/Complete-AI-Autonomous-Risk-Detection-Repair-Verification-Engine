@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Complete AI — Organizational Command Center</title>
+<style>
+  :root{
+    --bg:#0a0e16; --panel:#0f1622; --panel-2:#121a28; --line:#1f2b3d;
+    --ink:#e4e9f0; --ink-dim:#8b98ab; --blue:#5eb3f5; --green:#4fc98a;
+    --amber:#e0a458; --violet:#a58cec; --red:#e2574c; --pink:#e07fc2; --cyan:#5ee0d8;
+    --mono:'JetBrains Mono', ui-monospace, monospace; --sans:'Inter', system-ui, sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:radial-gradient(ellipse at top left, #101c2e 0%, var(--bg) 55%); color:var(--ink); font-family:var(--sans); min-height:100vh;}
+  ::selection{background:var(--blue); color:#0a0e16;}
+
+  .topbar{display:flex; align-items:center; justify-content:space-between; padding:16px 28px; border-bottom:1px solid var(--line); background:linear-gradient(180deg, rgba(94,179,245,0.05), transparent);}
+  .wordmark{font-family:var(--mono); font-weight:700; font-size:20px; letter-spacing:0.5px; display:flex; align-items:center; gap:10px;}
+  .wordmark .dot{width:12px; height:12px; border-radius:3px; background:var(--blue); box-shadow:0 0 12px rgba(94,179,245,0.6);}
+  .tagline{font-size:12px; color:var(--ink-dim); margin-top:2px; font-family:var(--mono)}
+
+  .input-bar{padding:14px 28px; border-bottom:1px solid var(--line); display:flex; gap:10px; flex-wrap:wrap;}
+  .input-bar textarea{flex:1; min-width:320px; background:var(--panel); border:1px solid var(--line); border-radius:8px; color:var(--ink); padding:12px 14px; font-family:var(--sans); font-size:14px; resize:vertical; min-height:44px;}
+  .input-bar textarea:focus{outline:none; border-color:var(--blue)}
+  .btn{font-family:var(--mono); background:var(--blue); color:#0a0e16; border:none; padding:10px 18px; border-radius:8px; font-weight:700; font-size:13px; cursor:pointer; letter-spacing:0.3px; white-space:nowrap;}
+  .btn:disabled{opacity:0.4; cursor:default}
+  .btn.approve{background:var(--green)}
+  .btn.reject{background:var(--red)}
+  .btn.small{padding:6px 12px; font-size:11px}
+
+  .demo-buttons{padding:0 28px 14px; display:flex; gap:8px; flex-wrap:wrap;}
+  .demo-btn{font-family:var(--mono); font-size:11.5px; padding:8px 14px; border:1px solid var(--line); border-radius:6px; color:var(--ink-dim); cursor:pointer; background:var(--panel); max-width:280px;}
+  .demo-btn-caption{margin-top:5px; font-size:10px; color:#5a6a80; line-height:1.4;}
+  .demo-btn:hover{border-color:var(--blue); color:var(--blue)}
+  .demo-btn .label{color:var(--violet); font-weight:700; margin-right:6px}
+
+  .source-row{padding:10px 28px 2px; border-bottom:none; display:flex; gap:14px; flex-wrap:wrap; align-items:center;}
+  .source-legend{padding:0 28px 10px; border-bottom:1px solid var(--line); font-family:var(--mono); font-size:10.5px; color:var(--ink-dim);}
+  .source-badge{font-family:var(--mono); font-size:11px; padding:5px 10px; border:1px solid var(--line); border-radius:12px; color:var(--ink-dim); transition:all .3s;}
+  .source-badge .pip{display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--ink-dim); margin-right:6px;}
+  .source-badge.lit{border-color:var(--green); color:var(--green); background:rgba(79,201,138,0.08);}
+  .source-badge.lit .pip{background:var(--green); box-shadow:0 0 6px var(--green);}
+
+  .layout{display:grid; grid-template-columns:250px 1fr 320px; gap:0; min-height:calc(100vh - 220px)}
+  @media (max-width:1100px){.layout{grid-template-columns:1fr}}
+
+  .rail{border-right:1px solid var(--line); padding:16px; overflow-y:auto; max-height:calc(100vh - 220px)}
+  .rail h2{font-family:var(--mono); font-size:11px; letter-spacing:1.2px; text-transform:uppercase; color:var(--ink-dim); margin:4px 0 14px}
+  .org-item{border:1px solid var(--line); border-radius:6px; padding:10px; margin-bottom:8px; background:var(--panel); font-size:12px}
+  .org-item .id{font-family:var(--mono); color:var(--blue); font-size:11px}
+  .org-item .title{margin-top:3px; color:var(--ink)}
+  .empty-note{color:var(--ink-dim); font-size:13px; line-height:1.5}
+
+  .plan-step{display:flex; align-items:flex-start; gap:8px; margin-bottom:10px; font-size:12.5px}
+  .plan-icon{font-family:var(--mono); width:16px; flex-shrink:0}
+  .plan-done .plan-icon{color:var(--green)} .plan-active .plan-icon{color:var(--amber)}
+  .plan-pending .plan-icon{color:var(--ink-dim)} .plan-failed .plan-icon{color:var(--red)}
+
+  .main{padding:18px 22px; overflow-y:auto; max-height:calc(100vh - 220px)}
+  .section-title{font-family:var(--mono); font-size:11px; letter-spacing:1.2px; text-transform:uppercase; color:var(--ink-dim); margin:20px 0 8px}
+  .section-title:first-child{margin-top:0}
+
+  .stream{background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:14px 16px; font-family:var(--mono); font-size:12.5px; line-height:1.9; min-height:180px; max-height:380px; overflow-y:auto;}
+  .stream .line{opacity:0; animation:reveal .3s forwards}
+  @keyframes reveal{to{opacity:1}}
+  .phase-tag{display:inline-block; width:130px; font-weight:700}
+  .p-UNDERSTAND{color:var(--ink-dim)} .p-SEARCH{color:var(--blue)} .p-OBSERVE{color:#7fa8c9}
+  .p-READ{color:#7fa8c9} .p-RUN{color:var(--amber)} .p-EDIT{color:var(--amber)}
+  .p-TEST{color:var(--violet)} .p-VERIFY{color:var(--green)} .p-REQUEST_APPROVAL{color:var(--red)}
+  .p-CLOSE{color:#f0f0f0; font-weight:700}
+  .trail-warning{color:var(--amber)}
+  .trail-success{color:var(--green)}
+  .ts{color:#4a5b70; margin-right:8px}
+
+  .answer-box{background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:16px; font-size:13.5px; line-height:1.7; white-space:pre-wrap}
+
+  .verdict-banner{margin-top:14px; padding:12px 14px; border-radius:8px; font-family:var(--mono); font-size:13px; border:1px solid var(--line); font-weight:700;}
+  .verdict-VERIFIED_COMPLETE{border-color:var(--green); color:var(--green); background:rgba(79,201,138,0.08)}
+  .verdict-APPROVAL_REQUIRED{border-color:var(--violet); color:var(--violet); background:rgba(165,140,236,0.08)}
+  .verdict-PARTIALLY_COMPLETE{border-color:var(--amber); color:var(--amber); background:rgba(224,164,88,0.08)}
+  .verdict-INSUFFICIENT_EVIDENCE,.verdict-FAILED_VERIFICATION,.verdict-BLOCKED,.verdict-REJECTED{border-color:var(--red); color:var(--red); background:rgba(226,87,76,0.08)}
+
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:12px}
+  @media (max-width:800px){.grid2{grid-template-columns:1fr}}
+  .check-card{border:1px solid var(--line); border-radius:8px; padding:12px 14px; background:var(--panel); font-family:var(--mono); font-size:12px;}
+  .check-card .name{color:var(--ink-dim); font-size:10px; letter-spacing:0.6px; text-transform:uppercase;}
+  .check-card .verdict{font-size:16px; font-weight:700; margin-top:4px}
+  .check-pass{color:var(--green)} .check-fail{color:var(--red)}
+
+  .code-box, .diff-box{background:#0d1420; border:1px solid var(--line); border-radius:8px; padding:12px 14px; font-family:var(--mono); font-size:11.5px; white-space:pre; overflow-x:auto; max-height:280px; overflow-y:auto}
+  .diff-add{color:var(--green)} .diff-del{color:var(--red)}
+  .file-tabs{display:flex; gap:6px; margin-bottom:8px; flex-wrap:wrap}
+  .file-tab{font-family:var(--mono); font-size:10.5px; padding:4px 9px; border:1px solid var(--line); border-radius:5px; color:var(--ink-dim); cursor:pointer;}
+  .file-tab.active{border-color:var(--cyan); color:var(--cyan)}
+
+  .card{border:1px solid var(--line); border-radius:8px; padding:14px 16px; background:var(--panel); margin-bottom:12px;}
+  .card .kv{display:flex; justify-content:space-between; font-family:var(--mono); font-size:11.5px; padding:3px 0; color:var(--ink-dim)}
+  .card .kv b{color:var(--ink); font-weight:600}
+  .card .title{font-weight:700; font-size:13.5px; margin-bottom:8px}
+  .card .actions{display:flex; gap:8px; margin-top:10px}
+  .badge{display:inline-block; font-family:var(--mono); font-size:10px; padding:2px 8px; border-radius:10px; border:1px solid var(--line); color:var(--ink-dim);}
+  .badge.pending{border-color:var(--violet); color:var(--violet)}
+  .badge.approved{border-color:var(--green); color:var(--green)}
+  .badge.rejected{border-color:var(--red); color:var(--red)}
+  .approval-group{border:1px solid var(--line); border-radius:8px; padding:12px; background:rgba(94,179,245,0.04);}
+  .approval-group-header{font-family:var(--mono); font-size:11px; color:var(--blue); margin-bottom:10px; letter-spacing:0.3px;}
+  .approval-group .card{margin-bottom:8px}
+  .approval-group .card:last-child{margin-bottom:0}
+  @keyframes badgeFlash{
+    0%{box-shadow:0 0 0 0 rgba(79,201,138,0.9)}
+    100%{box-shadow:0 0 0 10px rgba(79,201,138,0)}
+  }
+  .badge-just-resolved{animation:badgeFlash 0.6s ease-out}
+
+  .dim-grid{display:grid; grid-template-columns:repeat(auto-fit, minmax(140px,1fr)); gap:8px; margin-bottom:12px}
+  .dim-cell{border:1px solid var(--line); border-radius:6px; padding:8px 10px; background:#0d1420; text-align:center}
+  .dim-name{font-family:var(--mono); font-size:9.5px; letter-spacing:0.4px; text-transform:uppercase; color:var(--ink-dim)}
+  .dim-status{font-family:var(--mono); font-weight:700; font-size:13px; margin-top:4px}
+  .dim-warn{color:var(--amber)}
+  .filter-row{font-family:var(--mono); font-size:12px; color:var(--ink-dim); display:flex; gap:10px; align-items:center; margin-bottom:10px; flex-wrap:wrap}
+  .filter-row b{color:var(--cyan)}
+  .filter-row .arrow{color:var(--line)}
+  .sev-row{display:flex; gap:8px; margin-bottom:10px}
+  .sev-badge{font-family:var(--mono); font-size:10.5px; font-weight:700; padding:3px 9px; border-radius:10px;}
+  .sev-HIGH{background:rgba(226,87,76,0.15); color:var(--red)}
+  .sev-MEDIUM{background:rgba(224,164,88,0.15); color:var(--amber)}
+  .sev-LOW{background:rgba(94,179,245,0.15); color:var(--blue)}
+  .finding{font-family:var(--mono); font-size:12px; padding:8px 10px; border-left:2px solid var(--line); background:#0d1420; margin-bottom:6px;}
+  .finding-loc{color:var(--ink-dim); font-size:10.5px; margin-top:3px}
+  .review-repo-header{font-family:var(--mono); font-size:12px; font-weight:700; color:var(--cyan); margin:14px 0 8px; padding-top:12px; border-top:1px solid var(--line);}
+  .review-repo-header:first-child{margin-top:0; padding-top:0; border-top:none}
+  .review-sep{height:1px}
+  .automerge-banner{font-family:var(--mono); font-size:12.5px; font-weight:700; padding:10px 12px; border-radius:6px; margin-top:8px; background:rgba(79,201,138,0.1); border:1px solid var(--green); color:var(--green);}
+  .automerge-banner.blocked{background:rgba(165,140,236,0.1); border-color:var(--violet); color:var(--violet)}
+
+  .p-AUTO_MERGE{color:var(--green); font-weight:700}
+
+  .event-card{border:1px solid var(--line); border-radius:6px; padding:10px; margin-bottom:8px; background:var(--panel); font-size:11.5px}
+  .event-card .src-tag{font-family:var(--mono); font-size:9.5px; padding:2px 7px; border-radius:8px; letter-spacing:0.4px;}
+  .event-card .src-github_ci{background:rgba(94,179,245,0.15); color:var(--blue)}
+  .event-card .src-ticket_assigned{background:rgba(165,140,236,0.15); color:var(--violet)}
+  .event-card .ev-title{margin-top:5px; color:var(--ink); font-weight:600}
+  .event-card .ev-detail{margin-top:3px; color:var(--ink-dim); font-size:10.5px; line-height:1.4}
+  .event-card .dispatch-btn{margin-top:8px; width:100%}
+  .event-card.dispatched{opacity:0.45}
+  .event-card .dispatched-tag{font-family:var(--mono); font-size:10px; color:var(--green); margin-top:6px}
+
+  .multirepo-grid{display:flex; flex-direction:column; gap:10px}
+  .multirepo-card{border:1px solid var(--line); border-radius:8px; padding:12px 14px; background:var(--panel)}
+  .multirepo-card .rc-header{display:flex; justify-content:space-between; align-items:center; font-family:var(--mono); font-size:12.5px; font-weight:700}
+  .multirepo-card .rc-verdict{font-size:11px; padding:2px 9px; border-radius:10px;}
+  .rc-VERIFIED_COMPLETE{background:rgba(79,201,138,0.15); color:var(--green)}
+  .rc-PARTIALLY_COMPLETE, .rc-APPROVAL_REQUIRED{background:rgba(224,164,88,0.15); color:var(--amber)}
+  .rc-FAILED_VERIFICATION{background:rgba(226,87,76,0.15); color:var(--red)}
+  .multirepo-card .rc-detail{font-family:var(--mono); font-size:11px; color:var(--ink-dim); margin-top:6px}
+  .cross-service-banner{font-family:var(--mono); font-size:12.5px; font-weight:700; padding:12px 14px; border-radius:8px; margin-top:10px;}
+  .cross-service-pass{background:rgba(79,201,138,0.1); border:1px solid var(--green); color:var(--green)}
+  .cross-service-fail{background:rgba(226,87,76,0.1); border:1px solid var(--red); color:var(--red)}
+
+  .git-op{font-family:var(--mono); font-size:12px; padding:8px 10px; border-left:2px solid var(--amber); background:var(--panel); margin-bottom:6px;}
+
+  .audit-grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(150px,1fr)); gap:10px;}
+  .audit-cell{border:1px solid var(--line); border-radius:8px; padding:10px 12px; background:var(--panel); cursor:help;}
+  .audit-cell-zero-cost{border-color:var(--green); background:rgba(79,201,138,0.08);}
+  .audit-cell-zero-cost .n{color:var(--green)}
+  .audit-cell .n{font-family:var(--mono); font-size:20px; font-weight:700; color:var(--cyan)}
+  .audit-cell .l{font-size:10.5px; color:var(--ink-dim); margin-top:2px}
+
+  .side{border-left:1px solid var(--line); padding:16px; overflow-y:auto; max-height:calc(100vh - 220px)}
+  .kind-group{margin-bottom:14px}
+  .kind-label{font-family:var(--mono); font-size:10px; letter-spacing:0.8px; text-transform:uppercase; margin-bottom:6px; display:flex; align-items:center; gap:5px}
+  .kind-dot{width:8px; height:8px; border-radius:50%}
+  .graph-chip{display:inline-block; font-family:var(--mono); font-size:10px; padding:3px 7px; margin:2px; border-radius:4px; border:1px solid; cursor:default;}
+  .graph-legend{display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; padding-top:8px; border-top:1px solid var(--line);}
+  .graph-legend-item{font-family:var(--mono); font-size:9.5px; color:var(--ink-dim); display:flex; align-items:center; gap:4px;}
+  .graph-node text{pointer-events:none}
+  #nodeDetail{margin-top:10px}
+
+  .evidence-item{border:1px solid var(--line); border-radius:5px; padding:8px 10px; margin-bottom:6px; font-size:11.5px; background:var(--panel)}
+  .evidence-item .src{font-family:var(--mono); color:var(--blue); font-size:10px; margin-bottom:3px}
+  .evidence-item .content{color:var(--ink)}
+
+  ::-webkit-scrollbar{width:8px; height:8px}
+  ::-webkit-scrollbar-thumb{background:var(--line); border-radius:4px}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div>
+    <div class="wordmark"><span class="dot"></span> COMPLETE AI</div>
+    <div class="tagline">one agent &middot; one context &middot; one memory &mdash; find, understand, do, and verify real work</div>
+  </div>
+  <div id="mergeRateStat" style="display:none; font-family:var(--mono); font-size:11.5px; color:var(--green); border:1px solid var(--green); border-radius:8px; padding:8px 14px; background:rgba(79,201,138,0.08);"></div>
+</div>
+
+<div class="input-bar">
+  <textarea id="objectiveInput" placeholder="What needs to get done? (a question, an objective, or just a ticket id)"></textarea>
+  <button class="btn" id="runBtn">Run &#9656;</button>
+</div>
+<div class="demo-buttons" id="demoButtons"></div>
+
+<div class="source-row" id="sourceRow"></div>
+<div class="source-legend">Lit = this source was actually searched for the current task. Unlit = not needed for this objective.</div>
+
+<div class="layout">
+  <div class="rail">
+    <h2>Organization</h2>
+    <div id="orgSummary"><div class="empty-note">Loading&hellip;</div></div>
+    <h2 style="margin-top:20px">Event Center <span style="color:var(--ink-dim); font-weight:400">(zero-prompt entry)</span></h2>
+    <div id="eventCenter"><div class="empty-note">Loading&hellip;</div></div>
+    <h2 style="margin-top:20px">Task Plan</h2>
+    <div id="planPanel"><div class="empty-note">No task running.</div></div>
+  </div>
+
+  <div class="main">
+    <div class="section-title">Live Work Stream</div>
+    <div class="stream" id="stream"><div class="empty-note">Give Complete AI an objective, a question, or a bare ticket id &mdash; no repo, no file required.</div></div>
+
+    <div id="answerSection" style="display:none">
+      <div class="section-title">Answer</div>
+      <div class="answer-box" id="answerBox"></div>
+    </div>
+
+    <div id="multiRepoSection" style="display:none">
+      <div class="section-title">Multi-Repo Results</div>
+      <div class="multirepo-grid" id="multiRepoGrid"></div>
+      <div id="crossServiceBanner"></div>
+    </div>
+
+    <div id="qualitySection" style="display:none">
+      <div class="section-title">Git / Code / Test / PR Workspace</div>
+      <div class="grid2" id="qualityGrid"></div>
+    </div>
+
+    <div id="gitSection" style="display:none">
+      <div id="gitOps"></div>
+    </div>
+
+    <div id="codeSection" style="display:none">
+      <div class="section-title">Code Viewer</div>
+      <div class="file-tabs" id="codeTabs"></div>
+      <div class="code-box" id="codeBox"></div>
+    </div>
+
+    <div id="diffSection" style="display:none">
+      <div class="section-title">Diff</div>
+      <div class="file-tabs" id="diffTabs"></div>
+      <div class="diff-box" id="diffBox"></div>
+    </div>
+
+    <div id="reviewSection" style="display:none">
+      <div class="section-title">AI Review</div>
+      <div class="card" id="reviewCard"></div>
+    </div>
+
+    <div id="approvalsSection" style="display:none">
+      <div class="section-title">Approvals</div>
+      <div id="approvalsPanel"></div>
+    </div>
+
+    <div id="verdictBanner"></div>
+
+    <div id="auditSection" style="display:none">
+      <div class="section-title">Demo Audit</div>
+      <div class="audit-grid" id="auditGrid"></div>
+    </div>
+  </div>
+
+  <div class="side">
+    <div class="section-title" style="margin-top:0">Context</div>
+    <div id="contextGraph"><div class="empty-note">Entities appear here as real nodes, connected by their real relationships, as Complete AI discovers them.</div></div>
+    <div id="nodeDetail" style="display:none"></div>
+
+    <div class="section-title">Evidence</div>
+    <div id="evidence"><div class="empty-note">&mdash;</div></div>
+  </div>
+</div>
+
+<script>
+const API_BASE = window.location.port === '8001' ? '' : 'http://127.0.0.1:8001';
+
+const DEMO_TASKS = [
+  {label: "ORGANIZATIONAL MEMORY", objective: "Why does payment-router use this fallback strategy?",
+   caption: "Answers from search alone \u2014 no code is touched, no repo is inspected."},
+  {label: "AUTONOMOUS ENGINEERING", objective: "__TICKET__",
+   caption: "Ticket ID only, no objective text \u2014 the agent reads the ticket itself."},
+  {label: "COMPLETE AI", objective: "Checkout latency increased after last week's release. Find out why and fix it.",
+   caption: "A vague sentence \u2014 search, code, and test all happen in one continuous task."},
+];
+
+const SOURCES = [
+  {key: "slack", label: "Slack"},
+  {key: "pull_request", label: "GitHub"},
+  {key: "commit", label: "GitHub"},
+  {key: "drive", label: "Drive"},
+  {key: "log", label: "Logs"},
+  {key: "ticket", label: "Jira"},
+  {key: "wiki", label: "Wiki"},
+  {key: "incident", label: "Incidents"},
+];
+const SOURCE_LABELS = [...new Set(SOURCES.map(s => s.label))];
+
+const KIND_COLORS = {
+  Incident: "#e2574c", Deployment: "#e0a458", PullRequest: "#5eb3f5", Commit: "#5eb3f5",
+  Repository: "#4fc98a", Ticket: "#a58cec", Document: "#5ee0d8", WikiPage: "#5ee0d8", Message: "#e07fc2",
+  Other: "#8b98ab",
+};
+
+let orgGraphNodeKinds = {};
+let orgGraphEdges = [];
+let firstTicketId = null;
+
+async function fetchJsonWithRetry(url, options, retries, delayMs, perAttemptTimeoutMs){
+  retries = retries === undefined ? 4 : retries;
+  delayMs = delayMs === undefined ? 500 : delayMs;
+  perAttemptTimeoutMs = perAttemptTimeoutMs === undefined ? 20000 : perAttemptTimeoutMs;
+  let lastErr;
+  for (let attempt = 0; attempt <= retries; attempt++){
+    const ctrl = new AbortController();
+    const timer = setTimeout(function(){ ctrl.abort(); }, perAttemptTimeoutMs);
+    try{
+      const merged = Object.assign({}, options, {signal: ctrl.signal});
+      const r = await fetch(url, merged);
+      clearTimeout(timer);
+      return r;
+    }catch(e){
+      clearTimeout(timer);
+      lastErr = e;
+      if (attempt < retries) await new Promise(function(res){ setTimeout(res, delayMs); });
+    }
+  }
+  throw lastErr;
+}
+
+function renderSourceRow(litSources){
+  litSources = litSources || [];
+  const el = document.getElementById('sourceRow');
+  const litLabels = new Set(SOURCES.filter(s => litSources.indexOf(s.key) !== -1).map(s => s.label));
+  el.innerHTML = SOURCE_LABELS.map(function(label){
+    const lit = litLabels.has(label);
+    return '<span class="source-badge' + (lit ? ' lit' : '') + '"><span class="pip"></span>' + label + '</span>';
+  }).join('');
+}
+
+function renderDemoButtons(){
+  const el = document.getElementById('demoButtons');
+  el.innerHTML = DEMO_TASKS.map(function(d, i){
+    return '<div class="demo-btn" data-idx="' + i + '"><span class="label">' + d.label + '</span>' +
+      (d.objective === '__TICKET__' ? 'Give it only a ticket id' : d.objective) +
+      '<div class="demo-btn-caption">' + d.caption + '</div></div>';
+  }).join('');
+  el.querySelectorAll('.demo-btn').forEach(function(btn){
+    btn.onclick = function(){
+      const idx = parseInt(btn.getAttribute('data-idx'), 10);
+      let objective = DEMO_TASKS[idx].objective;
+      if (objective === '__TICKET__') objective = firstTicketId || 'TCK-1000';
+      document.getElementById('objectiveInput').value = objective;
+      runTask();
+    };
+  });
+}
+
+async function loadOrgSummary(){
+  const el = document.getElementById('orgSummary');
+  try{
+    const r = await fetchJsonWithRetry(API_BASE + '/api/organization/summary');
+    const s = await r.json();
+    let html = '';
+    s.repositories.forEach(function(x){
+      html += '<div class="org-item"><div class="id">' + x.repo_id + '</div><div class="title">' + x.description + '</div></div>';
+    });
+    s.incidents.forEach(function(x){
+      html += '<div class="org-item"><div class="id">' + x.incident_id + ' &middot; ' + x.status + '</div><div class="title">' + x.title + '</div></div>';
+    });
+    el.innerHTML = html;
+    if (s.tickets && s.tickets.length) firstTicketId = s.tickets[0].ticket_id;
+  }catch(e){
+    el.innerHTML = '<div class="empty-note">Could not reach Complete AI API.</div>';
+  }
+}
+
+async function loadOrgGraphKinds(){
+  try{
+    const r = await fetchJsonWithRetry(API_BASE + '/api/organization/graph');
+    const g = await r.json();
+    const map = {};
+    g.nodes.forEach(function(n){ map[n.id] = {kind: n.kind || 'Other', label: n.label || n.id}; });
+    orgGraphNodeKinds = map;
+    orgGraphEdges = g.edges || [];
+  }catch(e){ /* non-fatal */ }
+}
+
+async function loadEventCenter(){
+  const el = document.getElementById('eventCenter');
+  try{
+    const r = await fetchJsonWithRetry(API_BASE + '/api/events');
+    const events = await r.json();
+    if (!events.length){ el.innerHTML = '<div class="empty-note">No pending events.</div>'; return; }
+    const srcLabels = {github_ci: 'GITHUB CI', ticket_assigned: 'TICKET AUTO-ASSIGN'};
+    el.innerHTML = events.map(function(e){
+      const dispatched = e.consumed === 'dispatched';
+      return '<div class="event-card' + (dispatched ? ' dispatched' : '') + '">' +
+        '<span class="src-tag src-' + e.source + '">' + (srcLabels[e.source] || e.source) + '</span>' +
+        '<div class="ev-title">' + e.title + '</div>' +
+        '<div class="ev-detail">' + e.detail + '</div>' +
+        (dispatched
+          ? '<div class="dispatched-tag">&#10003; dispatched</div>'
+          : '<button class="btn dispatch-btn small" data-event-id="' + e.event_id + '">DISPATCH &#9656;</button>') +
+        '</div>';
+    }).join('');
+    el.querySelectorAll('.dispatch-btn').forEach(function(btn){
+      btn.onclick = function(){ dispatchEvent(btn.getAttribute('data-event-id')); };
+    });
+  }catch(e){
+    el.innerHTML = '<div class="empty-note">Could not reach Complete AI API.</div>';
+  }
+}
+
+async function dispatchEvent(eventId){
+  const btn = document.querySelector('.dispatch-btn[data-event-id="' + eventId + '"]');
+  if (btn){ btn.disabled = true; btn.textContent = 'Dispatching\u2026'; }
+
+  document.getElementById('stream').innerHTML = '<div class="empty-note">Event dispatched \u2014 Complete AI is working, with no human-typed objective\u2026</div>';
+  ['answerSection','multiRepoSection','qualitySection','gitSection','codeSection','diffSection','reviewSection','approvalsSection','auditSection'].forEach(function(id){
+    document.getElementById(id).style.display = 'none';
+  });
+  document.getElementById('verdictBanner').innerHTML = '';
+  renderPlan([]); renderContextGraph([]); renderEvidence([]); renderSourceRow([]);
+
+  try{
+    const r = await fetchJsonWithRetry(API_BASE + '/api/events/' + eventId + '/dispatch', {method: 'POST'}, 2, 500, 60000);
+    const body = await r.json();
+    if (!r.ok){
+      document.getElementById('stream').innerHTML = '<div class="empty-note">' + (body.detail || 'Dispatch failed.') + '</div>';
+    } else {
+      currentTaskId = body.task_id;
+      document.getElementById('objectiveInput').value = body.state.objective;
+      await playAuditTrail(body.state);
+    }
+  }catch(e){
+    document.getElementById('stream').innerHTML = '<div class="empty-note">Could not reach Complete AI API.</div>';
+  } finally {
+    loadEventCenter();
+  }
+}
+
+function renderPlan(plan){
+  const el = document.getElementById('planPanel');
+  if (!plan || !plan.length){ el.innerHTML = '<div class="empty-note">No task running.</div>'; return; }
+  const icons = {done:'&#10003;', active:'&#9679;', pending:'&#9675;', failed:'&#10007;'};
+  el.innerHTML = plan.map(function(p){
+    return '<div class="plan-step plan-' + p.status + '"><span class="plan-icon">' + (icons[p.status]||'&#9675;') + '</span><span>' + p.step + '</span></div>';
+  }).join('');
+}
+
+function renderContextGraph(nodeIds, evidence){
+  const el = document.getElementById('contextGraph');
+  if (!nodeIds || !nodeIds.length){
+    el.innerHTML = '<div class="empty-note">Entities appear here as real nodes, connected by their real relationships, as Complete AI discovers them.</div>';
+    document.getElementById('nodeDetail').style.display = 'none';
+    return;
+  }
+
+  const idSet = new Set(nodeIds);
+  const groups = {};
+  nodeIds.forEach(function(id){
+    const info = orgGraphNodeKinds[id] || {kind: 'Other', label: id};
+    if (!groups[info.kind]) groups[info.kind] = [];
+    groups[info.kind].push({id: id, label: info.label});
+  });
+  const kindNames = Object.keys(groups).sort();
+
+  // cheap, deterministic layout: one ring per kind, nodes spread evenly
+  // around each ring — no physics simulation, so this is safe to call on
+  // every reveal step without stuttering the live work stream.
+  const W = 520, H = 360, cx = W / 2, cy = H / 2;
+  const positions = {};
+  const ringGap = Math.min(140, (Math.min(W, H) / 2 - 40) / Math.max(1, kindNames.length));
+  kindNames.forEach(function(kind, ki){
+    const ring = 34 + ki * ringGap;
+    const nodes = groups[kind];
+    nodes.forEach(function(n, i){
+      const angle = (2 * Math.PI * i) / nodes.length + ki * 0.6;
+      positions[n.id] = {
+        x: cx + ring * Math.cos(angle),
+        y: cy + ring * Math.sin(angle),
+        kind: kind, label: n.label,
+      };
+    });
+  });
+
+  const edgeLines = orgGraphEdges
+    .filter(function(e){ return idSet.has(e.source) && idSet.has(e.target); })
+    .map(function(e){
+      const a = positions[e.source], b = positions[e.target];
+      if (!a || !b) return '';
+      return '<line x1="' + a.x + '" y1="' + a.y + '" x2="' + b.x + '" y2="' + b.y + '" stroke="#1f2b3d" stroke-width="1.5"/>';
+    }).join('');
+
+  const nodeCircles = nodeIds.map(function(id){
+    const p = positions[id];
+    if (!p) return '';
+    const color = KIND_COLORS[p.kind] || KIND_COLORS.Other;
+    const shortLabel = (p.label || id).length > 14 ? (p.label || id).slice(0, 13) + '\u2026' : (p.label || id);
+    return '<g class="graph-node" data-node-id="' + id.replace(/"/g,'&quot;') + '" style="cursor:pointer">' +
+      '<circle cx="' + p.x + '" cy="' + p.y + '" r="7" fill="' + color + '" stroke="#0a0e16" stroke-width="1.5"><title>' + p.kind + ': ' + id + '</title></circle>' +
+      '<text x="' + p.x + '" y="' + (p.y + 18) + '" text-anchor="middle" font-size="9" fill="' + color + '" font-family="monospace">' + shortLabel + '</text>' +
+      '</g>';
+  }).join('');
+
+  const legendHtml = kindNames.map(function(kind){
+    const color = KIND_COLORS[kind] || KIND_COLORS.Other;
+    return '<span class="graph-legend-item"><span class="kind-dot" style="background:' + color + '"></span>' + kind + ' (' + groups[kind].length + ')</span>';
+  }).join('');
+
+  el.innerHTML =
+    '<svg viewBox="0 0 ' + W + ' ' + H + '" width="100%" style="display:block">' + edgeLines + nodeCircles + '</svg>' +
+    '<div class="graph-legend">' + legendHtml + '</div>';
+
+  el.querySelectorAll('.graph-node').forEach(function(g){
+    g.addEventListener('click', function(){
+      renderNodeDetail(g.getAttribute('data-node-id'), evidence);
+    });
+  });
+}
+
+function renderNodeDetail(nodeId, evidence){
+  const el = document.getElementById('nodeDetail');
+  const info = orgGraphNodeKinds[nodeId] || {kind: 'Other', label: nodeId};
+  const match = (evidence || []).find(function(e){ return e.source_id === nodeId; });
+  let html = '<div class="evidence-item"><div class="src">' + info.kind + ' \u00b7 ' + nodeId + '</div>';
+  if (match){
+    html += '<div class="content">' + (match.content || '').toString().slice(0, 400) + '</div>';
+  } else {
+    html += '<div class="content">' + (info.label || nodeId) +
+      '<br><span style="color:var(--ink-dim); font-size:10.5px">No retrieved passage for this entity in the current task\u2019s evidence \u2014 it appeared only via a graph relationship.</span></div>';
+  }
+  html += '</div>';
+  el.innerHTML = html;
+  el.style.display = 'block';
+}
+
+function renderEvidence(evidence){
+  const el = document.getElementById('evidence');
+  if (!evidence || !evidence.length){ el.innerHTML = '<div class="empty-note">&mdash;</div>'; return; }
+  el.innerHTML = evidence.slice(-20).map(function(e){
+    return '<div class="evidence-item"><div class="src">' + e.source + ' &middot; ' + e.source_id + '</div>' +
+      '<div class="content">' + (e.content||'').toString().slice(0,160) + '</div></div>';
+  }).join('');
+}
+
+function verdictBanner(status){
+  const el = document.getElementById('verdictBanner');
+  const labelMap = {
+    VERIFIED_COMPLETE: '\u2713 VERIFIED COMPLETE \u2014 independently re-checked',
+    APPROVAL_REQUIRED: '\u2691 APPROVAL REQUIRED \u2014 verified, pending human sign-off',
+    PARTIALLY_COMPLETE: '\u25D1 PARTIALLY COMPLETE',
+    INSUFFICIENT_EVIDENCE: '\u2715 INSUFFICIENT EVIDENCE',
+    FAILED_VERIFICATION: '\u2715 FAILED VERIFICATION',
+    BLOCKED: '\u26D4 BLOCKED',
+    REJECTED: '\u2715 REJECTED BY REVIEWER',
+  };
+  el.className = 'verdict-banner verdict-' + status;
+  el.textContent = labelMap[status] || status;
+}
+
+function renderQualityChecks(checks){
+  const section = document.getElementById('qualitySection');
+  const grid = document.getElementById('qualityGrid');
+  if (!checks || !checks.length){ section.style.display = 'none'; return; }
+  section.style.display = 'block';
+  grid.innerHTML = checks.map(function(c){
+    const pass = c.passed;
+    return '<div class="check-card"><div class="name">' + c.check + '</div>' +
+      '<div class="verdict ' + (pass ? 'check-pass' : 'check-fail') + '">' + (pass ? 'PASS' : 'FAIL') + '</div></div>';
+  }).join('');
+}
+
+function renderGitOps(ops){
+  const section = document.getElementById('gitSection');
+  const el = document.getElementById('gitOps');
+  if (!ops || !ops.length){ section.style.display = 'none'; return; }
+  section.style.display = 'block';
+  el.innerHTML = ops.map(function(op){
+    if (op.op === 'create_branch') return '<div class="git-op">git checkout -b <b>' + op.branch + '</b> &mdash; ' + (op.success ? 'OK' : 'FAILED') + '</div>';
+    if (op.op === 'commit') return '<div class="git-op">git commit <b>' + (op.commit_sha||'') + '</b> &mdash; ' + (op.success ? 'OK' : 'FAILED') + '</div>';
+    return '';
+  }).join('');
+}
+
+function renderCodeViewer(artifacts){
+  const section = document.getElementById('codeSection');
+  const tabs = document.getElementById('codeTabs');
+  const box = document.getElementById('codeBox');
+  const fileReads = (artifacts||[]).filter(function(a){ return a.type === 'file_read'; });
+  if (!fileReads.length){ section.style.display = 'none'; return; }
+  section.style.display = 'block';
+  tabs.innerHTML = fileReads.map(function(f, i){
+    return '<div class="file-tab' + (i===0?' active':'') + '" data-idx="' + i + '">' + f.repo_id + '/' + f.file_path + '</div>';
+  }).join('');
+  function show(i){
+    box.textContent = fileReads[i].content;
+    tabs.querySelectorAll('.file-tab').forEach(function(t, j){ t.classList.toggle('active', j===i); });
+  }
+  tabs.querySelectorAll('.file-tab').forEach(function(t){
+    t.onclick = function(){ show(parseInt(t.getAttribute('data-idx'),10)); };
+  });
+  show(0);
+}
+
+function renderDiff(diffArtifacts){
+  const el = document.getElementById('diffBox');
+  const tabsEl = document.getElementById('diffTabs');
+  const section = document.getElementById('diffSection');
+  const list = (diffArtifacts || []).filter(function(a){ return a.content && a.content.trim(); });
+  if (!list.length){ section.style.display = 'none'; return; }
+  section.style.display = 'block';
+
+  function escapeDiff(text){
+    return text.split('\n').map(function(line){
+      const esc = line.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      if (line.indexOf('+') === 0 && line.indexOf('+++') !== 0) return '<span class="diff-add">' + esc + '</span>';
+      if (line.indexOf('-') === 0 && line.indexOf('---') !== 0) return '<span class="diff-del">' + esc + '</span>';
+      return esc;
+    }).join('\n');
+  }
+
+  if (list.length === 1){
+    tabsEl.innerHTML = '';
+    el.innerHTML = escapeDiff(list[0].content);
+    return;
+  }
+
+  tabsEl.innerHTML = list.map(function(a, i){
+    return '<div class="file-tab' + (i===0?' active':'') + '" data-idx="' + i + '">' + (a.repo_id || 'diff ' + (i+1)) + '</div>';
+  }).join('');
+  function show(i){
+    el.innerHTML = escapeDiff(list[i].content);
+    tabsEl.querySelectorAll('.file-tab').forEach(function(t, j){ t.classList.toggle('active', j===i); });
+  }
+  tabsEl.querySelectorAll('.file-tab').forEach(function(t){
+    t.onclick = function(){ show(parseInt(t.getAttribute('data-idx'), 10)); };
+  });
+  show(0);
+}
+
+function renderMultiRepoResults(multiRepoResults, crossServiceCheck){
+  const section = document.getElementById('multiRepoSection');
+  const grid = document.getElementById('multiRepoGrid');
+  const banner = document.getElementById('crossServiceBanner');
+  if (!multiRepoResults || !multiRepoResults.length){ section.style.display = 'none'; return; }
+  section.style.display = 'block';
+
+  grid.innerHTML = multiRepoResults.map(function(r){
+    const verdictClass = 'rc-' + r.verdict;
+    let extra = '';
+    if (r.review_verdict) extra += '<div class="rc-detail">review: ' + r.review_verdict + '</div>';
+    if (r.branch) extra += '<div class="rc-detail">branch: ' + r.branch + '</div>';
+    if (r.reason) extra += '<div class="rc-detail">' + r.reason + '</div>';
+    if (typeof r.auto_mergeable !== 'undefined') {
+      extra += '<div class="rc-detail">' + (r.auto_mergeable ? '\u2713 auto-merged' : '\u26D4 needs human review') + '</div>';
+    }
+    return '<div class="multirepo-card"><div class="rc-header"><span>' + r.repo_id + '</span>' +
+      '<span class="rc-verdict ' + verdictClass + '">' + r.verdict + '</span></div>' + extra + '</div>';
+  }).join('');
+
+  if (crossServiceCheck){
+    const ok = crossServiceCheck.agrees;
+    banner.innerHTML = '<div class="cross-service-banner ' + (ok ? 'cross-service-pass' : 'cross-service-fail') + '">' +
+      (ok ? '\u2713 CROSS-SERVICE CONTRACT VERIFIED' : '\u2715 CROSS-SERVICE CONTRACT MISMATCH') +
+      ' \u2014 real invocation of each repository\'s function: ' +
+      Object.keys(crossServiceCheck.schemas).map(function(k){
+        return k + '=' + JSON.stringify(crossServiceCheck.schemas[k]);
+      }).join(', ') + '</div>';
+  } else {
+    banner.innerHTML = '';
+  }
+}
+
+function renderReview(artifacts, mergePolicy, autoMerged){
+  const section = document.getElementById('reviewSection');
+  const el = document.getElementById('reviewCard');
+  const reviews = (artifacts||[]).filter(function(a){ return a.type === 'pr_review'; });
+  if (!reviews.length){ section.style.display = 'none'; return; }
+  section.style.display = 'block';
+
+  const dimLabels = {
+    bug_detection: 'Bug Detection', security: 'Security', design_system: 'Design System',
+    internationalization: 'Internationalization', pre_mortem: 'Pre-mortem',
+  };
+  const dimClass = {PASS: 'check-pass', WARNING: 'dim-warn', FAIL: 'check-fail'};
+  const multi = reviews.length > 1;
+
+  function renderOne(review){
+    let html = '';
+    if (multi){
+      html += '<div class="review-repo-header">' + (review.repo_id || '') + '</div>';
+    }
+    html += '<div class="dim-grid">';
+    Object.keys(review.dimensions).forEach(function(key){
+      const status = review.dimensions[key];
+      html += '<div class="dim-cell"><div class="dim-name">' + (dimLabels[key]||key) + '</div>' +
+        '<div class="dim-status ' + (dimClass[status]||'') + '">' + status + '</div></div>';
+    });
+    html += '</div>';
+
+    html += '<div class="filter-row">' +
+      '<span><b>' + review.potential_findings.length + '</b> potential findings</span>' +
+      '<span class="arrow">&rarr;</span>' +
+      '<span><b>' + review.filtered_count + '</b> filtered as low-confidence</span>' +
+      '<span class="arrow">&rarr;</span>' +
+      '<span><b>' + review.actionable_findings.length + '</b> actionable</span></div>';
+
+    html += '<div class="sev-row">' +
+      '<span class="sev-badge sev-HIGH">HIGH ' + review.severity_counts.HIGH + '</span>' +
+      '<span class="sev-badge sev-MEDIUM">MEDIUM ' + review.severity_counts.MEDIUM + '</span>' +
+      '<span class="sev-badge sev-LOW">LOW ' + review.severity_counts.LOW + '</span></div>';
+
+    if (review.actionable_findings.length){
+      html += review.actionable_findings.map(function(f){
+        return '<div class="finding"><span class="sev-badge sev-' + f.severity + '">' + f.severity + '</span> ' +
+          '<b>' + (dimLabels[f.dimension]||f.dimension) + ':</b> ' + f.message +
+          (f.location ? '<div class="finding-loc">' + f.location + '</div>' : '') + '</div>';
+      }).join('');
+    }
+    return html;
+  }
+
+  let html = reviews.map(renderOne).join(multi ? '<div class="review-sep"></div>' : '');
+
+  if (!multi){
+    if (autoMerged){
+      html += '<div class="automerge-banner">\u2713 AUTO-MERGED \u2014 zero human review. ' +
+        (mergePolicy ? mergePolicy.reason : '') + '</div>';
+    } else if (mergePolicy){
+      html += '<div class="automerge-banner blocked">\u26D4 Routed to human review \u2014 ' + mergePolicy.reason + '</div>';
+    }
+  } else if (autoMerged){
+    html += '<div class="automerge-banner">\u2713 ALL REPOSITORIES AUTO-MERGED \u2014 zero human review across the board.</div>';
+  }
+
+  el.innerHTML = html;
+}
+
+async function loadMergeRate(){
+  try{
+    const r = await fetchJsonWithRetry(API_BASE + '/api/stats/merge-rate');
+    const s = await r.json();
+    const el = document.getElementById('mergeRateStat');
+    if (s.total_engineering_tasks > 0){
+      el.textContent = s.auto_merged + ' of ' + s.total_engineering_tasks + ' engineering tasks merged with zero human review';
+      el.style.display = 'block';
+    } else {
+      el.style.display = 'none';
+    }
+  }catch(e){ /* non-fatal */ }
+}
+
+let currentTaskId = null;
+
+function renderApprovals(approvals, artifacts, justResolvedId){
+  const section = document.getElementById('approvalsSection');
+  const el = document.getElementById('approvalsPanel');
+  if (!approvals || !approvals.length){ section.style.display = 'none'; return; }
+  section.style.display = 'block';
+
+  const cardsHtml = approvals.map(function(a){
+    let badgeClass = 'pending', badgeText = 'PENDING';
+    if (a.resolved){
+      if (a.resolution === 'approve'){ badgeClass = 'approved'; badgeText = 'APPROVED'; }
+      else if (a.resolution === 'auto_approved'){ badgeClass = 'approved'; badgeText = 'AUTO-APPROVED'; }
+      else { badgeClass = 'rejected'; badgeText = 'REJECTED'; }
+    }
+    const flashClass = (a.action_id === justResolvedId) ? ' badge-just-resolved' : '';
+    let bodyHtml = '';
+    if (a.action === 'prepare_pull_request'){
+      const pr = (artifacts||[]).find(function(x){ return x.type === 'pull_request_draft' && x.action_id === a.action_id; });
+      if (pr){
+        bodyHtml = '<div class="kv">PR <b>#' + pr.pr_number + '</b></div>' +
+          '<div class="kv">Branch <b>' + pr.branch + '</b> &rarr; ' + pr.base_branch + '</div>' +
+          '<div class="kv">Reviewers <b>' + (pr.reviewers||[]).join(', ') + '</b></div>' +
+          '<div class="kv">Risk <b>' + (pr.risk_assessment||'').split('.')[0] + '</b></div>' +
+          '<div class="kv">Rollback <b>' + pr.rollback_plan + '</b></div>';
+      }
+    } else if (a.action === 'update_ticket'){
+      const t = (artifacts||[]).find(function(x){ return x.type === 'ticket_update_draft' && x.action_id === a.action_id; });
+      if (t) bodyHtml = '<div class="kv">Ticket <b>' + t.ticket_id + '</b></div><div class="kv" style="white-space:pre-wrap">' + t.comment + '</div>';
+    }
+    const actionButtons = a.resolved ? '' :
+      '<div class="actions"><button class="btn approve small" data-action="approve" data-id="' + a.action_id + '">APPROVE</button>' +
+      '<button class="btn reject small" data-action="reject" data-id="' + a.action_id + '">REJECT</button></div>';
+    return '<div class="card"><div class="title">' + a.action + ' <span class="badge ' + badgeClass + flashClass + '">' + badgeText + '</span></div>' + bodyHtml + actionButtons + '</div>';
+  }).join('');
+
+  const hasBoth = approvals.some(function(a){ return a.action === 'prepare_pull_request'; }) &&
+                  approvals.some(function(a){ return a.action === 'update_ticket'; });
+  if (hasBoth){
+    const pendingCount = approvals.filter(function(a){ return !a.resolved; }).length;
+    const headerText = pendingCount > 0
+      ? approvals.length + ' approvals pending for this fix'
+      : approvals.length + ' approvals resolved for this fix';
+    el.innerHTML = '<div class="approval-group"><div class="approval-group-header">' + headerText + '</div>' + cardsHtml + '</div>';
+  } else {
+    el.innerHTML = cardsHtml;
+  }
+
+  el.querySelectorAll('button[data-action]').forEach(function(btn){
+    btn.onclick = async function(){
+      btn.disabled = true;
+      const actionId = btn.getAttribute('data-id');
+      const decision = btn.getAttribute('data-action');
+      try{
+        const r = await fetchJsonWithRetry(API_BASE + '/api/tasks/' + currentTaskId + '/approvals', {
+          method: 'POST', headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({action_id: actionId, decision: decision}),
+        });
+        const body = await r.json();
+        if (r.ok){
+          renderApprovals(body.state.approvals, body.state.artifacts, actionId);
+          verdictBanner(body.task_status);
+          renderAudit(body.state);
+        }
+      }catch(e){ /* ignore */ }
+    };
+  });
+}
+
+const AUDIT_METRIC_EXPLANATIONS = {
+  'Sources searched': 'Counted from the distinct source types in this task\u2019s own retrieved evidence.',
+  'Artifacts retrieved': 'The number of real evidence items this task\u2019s own searches actually returned.',
+  'Repositories inspected': 'Counted from the repositories this task\u2019s own code changes actually touched.',
+  'Files read': 'Counted from this task\u2019s own file_read steps \u2014 real files opened, not a template.',
+  'Files modified': 'Counted from this task\u2019s own code_changes \u2014 real edits actually applied.',
+  'Tests run': 'Counted from this task\u2019s own real test executions.',
+  'Commands executed': 'Counted from this task\u2019s own RUN/TEST/EDIT log entries.',
+  'Git commits': 'Counted from this task\u2019s own real git commit operations.',
+  'PRs generated': 'Counted from this task\u2019s own prepared pull-request artifacts.',
+  'Approvals requested': 'Counted from this task\u2019s own pending approval actions.',
+  'LLM tokens used': 'Real usage this task\u2019s own reasoning policy reported \u2014 zero unless the optional LLM path actually ran.',
+};
+
+function computeAudit(state){
+  const trail = state.audit_trail || [];
+  return {
+    'Sources searched': new Set((state.evidence||[]).map(function(e){return e.source;})).size,
+    'Artifacts retrieved': (state.evidence||[]).length,
+    'Repositories inspected': new Set((state.code_changes||[]).map(function(c){return c.repo_id;})).size || (trail.some(t=>t.tool==='provision_sandbox')?1:0),
+    'Files read': (state.artifacts||[]).filter(function(a){return a.type==='file_read';}).length,
+    'Files modified': new Set((state.code_changes||[]).map(function(c){return c.file;})).size,
+    'Tests run': (state.test_results||[]).length,
+    'Commands executed': trail.filter(function(t){return ['RUN','TEST','EDIT'].indexOf(t.phase)!==-1;}).length,
+    'Git commits': (state.git_operations||[]).filter(function(g){return g.op==='commit' && g.success;}).length,
+    'PRs generated': (state.artifacts||[]).filter(function(a){return a.type==='pull_request_draft';}).length,
+    'Approvals requested': (state.approvals||[]).length,
+    'LLM tokens used': state.llm_usage ? (state.llm_usage.input_tokens + state.llm_usage.output_tokens) : 0,
+  };
+}
+
+function renderAudit(state){
+  const section = document.getElementById('auditSection');
+  const el = document.getElementById('auditGrid');
+  const metrics = computeAudit(state);
+  section.style.display = 'block';
+  let html = '';
+  Object.keys(metrics).forEach(function(k){
+    const isCost = (k === 'LLM tokens used');
+    const cellClass = isCost && metrics[k] === 0 ? 'audit-cell audit-cell-zero-cost' : 'audit-cell';
+    const explanation = AUDIT_METRIC_EXPLANATIONS[k] || 'Computed live from this task\u2019s own log, not a fixed template.';
+    html += '<div class="' + cellClass + '" title="' + explanation.replace(/"/g,'&quot;') + '"><div class="n">' + metrics[k] + '</div><div class="l">' + k + '</div></div>';
+  });
+  const costLabel = state.llm_usage
+    ? ('$' + state.llm_usage.estimated_cost_usd.toFixed(6) + ' (' + state.llm_usage.model + ')')
+    : 'reference policy \u2014 no LLM call made';
+  html += '<div class="audit-cell"><div class="n" style="font-size:13px">' + costLabel + '</div><div class="l">Reasoning cost</div></div>';
+  html += '<div class="audit-cell"><div class="n" style="font-size:14px">' + (state.status||'') + '</div><div class="l">Verification</div></div>';
+  el.innerHTML = html;
+}
+
+function delay(ms){ return new Promise(function(res){ setTimeout(res, ms); }); }
+
+function trailLineClass(entry){
+  const phase = entry.phase || '';
+  const text = entry.summary || '';
+  if (phase === 'AUTO_MERGE') return 'trail-success';
+  if (phase === 'VERIFY' && /APPROVED|VERIFIED_COMPLETE|\bPASS\b/i.test(text)) return 'trail-success';
+  if (phase === 'CLOSE'){
+    if (/APPROVAL_REQUIRED|INSUFFICIENT_EVIDENCE|FAILED_VERIFICATION/i.test(text)) return 'trail-warning';
+    if (/VERIFIED_COMPLETE/i.test(text)) return 'trail-success';
+  }
+  if (/newly fails|did not converge|no repair strategy matched|no strategy matched|edit failed|could not structurally analyze|still_failing/i.test(text)) return 'trail-warning';
+  if (phase === 'TEST' && /\(\d+ failing\)/i.test(text)) return 'trail-warning';
+  return '';
+}
+
+async function playAuditTrail(state){
+  const streamEl = document.getElementById('stream');
+  streamEl.innerHTML = '';
+  const trail = state.audit_trail || [];
+  const seenSources = new Set();
+  const allContextNodes = state.context_graph_nodes || [];
+  let lastRevealedCount = -1;
+
+  for (let i = 0; i < trail.length; i++){
+    const entry = trail[i];
+    const line = document.createElement('div');
+    line.className = 'line';
+    const ts = (entry.timestamp||'').split('T')[1] || '';
+    line.innerHTML = '<span class="ts">' + ts + '</span><span class="phase-tag p-' + entry.phase + '">' + entry.phase + '</span>' +
+      '<span class="' + trailLineClass(entry) + '">' + entry.summary + '</span>';
+    streamEl.appendChild(line);
+    streamEl.scrollTop = streamEl.scrollHeight;
+    renderPlan(state.plan);
+    if (entry.data && entry.data.sources){
+      entry.data.sources.forEach(function(s){ seenSources.add(s); });
+      renderSourceRow(Array.from(seenSources));
+    }
+    // Real data, revealed progressively rather than dumped all at once:
+    // the graph grows in step with the trail exactly like the source
+    // badges already do, using the same real context_graph_nodes the
+    // finished task actually produced — not a live-streaming graph, but
+    // not a static pre-baked one either. Cheap O(n) layout, so this never
+    // competes with the stream's own per-line rendering for time.
+    if (allContextNodes.length){
+      const revealCount = Math.max(1, Math.ceil(((i + 1) / trail.length) * allContextNodes.length));
+      if (revealCount !== lastRevealedCount){
+        lastRevealedCount = revealCount;
+        renderContextGraph(allContextNodes.slice(0, revealCount), state.evidence);
+      }
+    }
+    await delay(i < 6 ? 240 : 120);
+  }
+
+  renderSourceRow(Array.from(new Set((state.evidence||[]).map(function(e){return e.source;}))));
+  renderContextGraph(allContextNodes, state.evidence);
+  renderEvidence(state.evidence);
+
+  if (state.final_answer){
+    document.getElementById('answerSection').style.display = 'block';
+    document.getElementById('answerBox').textContent = state.final_answer;
+  } else {
+    document.getElementById('answerSection').style.display = 'none';
+  }
+
+  renderQualityChecks(state.quality_checks);
+  renderGitOps(state.git_operations);
+  renderCodeViewer(state.artifacts);
+
+  const diffArtifacts = (state.artifacts||[]).filter(function(a){ return a.type === 'diff'; });
+  renderDiff(diffArtifacts);
+
+  renderReview(state.artifacts, state.merge_policy, state.auto_merged);
+  renderMultiRepoResults(state.multi_repo_results, state.cross_service_check);
+  renderApprovals(state.approvals, state.artifacts);
+  verdictBanner(state.status);
+  renderAudit(state);
+  loadMergeRate();
+  loadEventCenter();
+}
+
+async function runTask(){
+  const objective = document.getElementById('objectiveInput').value.trim();
+  if (!objective) return;
+  const btn = document.getElementById('runBtn');
+  btn.disabled = true; btn.textContent = 'Running\u2026';
+
+  document.getElementById('stream').innerHTML = '<div class="empty-note">Complete AI is working\u2026</div>';
+  ['answerSection','qualitySection','gitSection','codeSection','diffSection','reviewSection','approvalsSection','auditSection'].forEach(function(id){
+    document.getElementById(id).style.display = 'none';
+  });
+  document.getElementById('verdictBanner').innerHTML = '';
+  renderPlan([]);
+  renderContextGraph([]);
+  renderEvidence([]);
+  renderSourceRow([]);
+
+  try{
+    const r = await fetchJsonWithRetry(API_BASE + '/api/tasks', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({objective: objective}),
+    }, 2, 500, 60000);
+    const body = await r.json();
+    if (!r.ok){
+      document.getElementById('stream').innerHTML = '<div class="empty-note">' + (body.detail || 'Task failed.') + '</div>';
+    } else {
+      currentTaskId = body.task_id;
+      await playAuditTrail(body.state);
+    }
+  }catch(e){
+    document.getElementById('stream').innerHTML = '<div class="empty-note">Could not reach Complete AI API.</div>';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Run \u25B8';
+  }
+}
+
+document.getElementById('runBtn').onclick = runTask;
+renderDemoButtons();
+renderSourceRow([]);
+loadOrgSummary();
+loadOrgGraphKinds();
+loadMergeRate();
+loadEventCenter();
+</script>
+</body>
+</html>

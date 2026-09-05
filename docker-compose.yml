@@ -1,0 +1,9 @@
+version: "3.9"
+services:
+  complete-ai-api:
+    build: .
+    container_name: complete-ai-api
+    command: uvicorn api.main:app --host 0.0.0.0 --port 8001
+    ports: ["8001:8001"]
+    env_file: [.env]
+    volumes: ["./data:/app/data", "./demo_org:/app/demo_org"]

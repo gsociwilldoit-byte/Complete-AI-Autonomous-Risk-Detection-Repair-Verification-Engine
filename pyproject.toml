@@ -1,0 +1,42 @@
+[tool.black]
+line-length = 110
+target-version = ["py312"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py312"
+
+[tool.ruff.lint]
+select = [
+    "E", "F", "I",      # pycodestyle, pyflakes, isort
+    "B",                # bugbear (real-bug-shaped patterns)
+    "BLE",              # blind except
+    "S112",             # try/except/continue without logging
+    "DTZ",              # naive datetime usage
+    "RUF",               # ruff-specific (mutable defaults, etc.)
+    "ISC",              # implicit string concatenation ambiguity
+    "PLW1510",           # subprocess.run without explicit check=
+]
+ignore = [
+    "E501",  # line length is handled by black, not worth double-enforcing
+]
+
+[tool.ruff.lint.per-file-ignores]
+# The simulator deliberately generates code containing an intentional bug
+# for the demo repos to reproduce and fix — that generated *string content*
+# is not linted by this project's own ruff run (it has its own baseline
+# normalization step, see simulator/repositories.py::_normalize_formatting).
+"tests/*" = ["S112"]
+
+[tool.pytest.ini_options]
+# Without this, a plain `pytest` from the repo root also tries to collect
+# the SIMULATED demo-org repos' own test files (e.g.
+# demo_org/workspace/checkout-service/tests/test_error_schema.py) — these
+# exist purely as fixtures the agent edits inside a sandbox, not as part
+# of this project's own test suite, and multiple repos each having a
+# tests/test_error_schema.py with no __init__.py collide on module name
+# during collection, crashing pytest before it runs a single real test.
+# Confirmed by running plain `pytest` from a clean checkout — it fails
+# immediately with "7 errors during collection", not by reading the code.
+testpaths = ["tests"]
+norecursedirs = ["demo_org", ".venv", "node_modules", ".git"]

@@ -1,0 +1,56 @@
+name: Complete AI CI
+
+# Deliberately does NOT pre-configure a global git identity and does NOT
+# pre-install ruff/black — the whole point of this workflow is to prove
+# the P0 correctness claims on exactly the kind of clean machine a judge
+# would actually demo on, not a machine this project has quietly been
+# relying on.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Confirm no global git identity is present (matches the demo environment this must work on)
+        run: |
+          git config --global --unset user.email || true
+          git config --global --unset user.name || true
+          if git config --global user.email > /dev/null 2>&1; then
+            echo "A global git identity is still discoverable — P0.1's guarantee is untestable here." >&2
+            exit 1
+          fi
+
+      - name: Install dependencies (the only source of ruff/black — see P0.2)
+        run: pip install -r requirements.txt
+
+      - name: Confirm ruff and black are reproducible from requirements.txt alone
+        run: |
+          python -m ruff --version
+          python -m black --version
+
+      - name: Lint (project's own source, not the simulated demo repos)
+        run: python -m ruff check agent/ tools/ knowledge/ sandbox/ simulator/ api/ models.py db.py logging_config.py tests/
+
+      - name: Format check
+        run: python -m black --check agent/ tools/ knowledge/ sandbox/ simulator/ api/ models.py db.py logging_config.py tests/
+
+      - name: Generate the seeded organization
+        run: python -m simulator.organization --seed 42
+
+      - name: Run the full test suite
+        run: python -m pytest tests/ -q
+
+      - name: Re-run with a different random seed (order-independence check)
+        run: python -m pytest tests/ -q -p randomly --randomly-seed=12345
